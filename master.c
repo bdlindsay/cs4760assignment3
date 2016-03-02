@@ -4,9 +4,6 @@
 // Brett Lindsay
 // Project 3 CS4760
 
-// prototypes
-int initelement(int,int,int); 
-
 const int p_n = 19; // process number to send each process
 const int n = 18; // its respective place in the flag array (1 less)
 char *arg2; // to send execl process args
@@ -22,8 +19,8 @@ main(int argc, char *argv[]) {
 	arg2 = malloc(sizeof(int)); // to send execl process args
 	arg3 = malloc(sizeof(int)); // to send execl process args
 	int pid;
-	const int key = 20; // key of shared semaphore set
-	int sem_id; // id of semaphore set
+	const int key_sem = 30; // key of shared semaphore set
+	const int key_shm = 31; // key of shared int
 	int act_procs = 0; // active process counter
 	int i = 0; // index var
 
@@ -37,26 +34,10 @@ main(int argc, char *argv[]) {
 		alarm(i);
 	} else { // default
 		fprintf(stderr,"Setting timeout for 60 seconds (default)\n");
-		alarm(60);
+		alarm(300);
 	}
-	// create semaphore set of size 3 for monitor
-	if ((sem_id = semget(key, SIZE, IPC_CREAT | 0755)) == -1) {
-		perror("Failed to create semaphore set");
-		return -1;
-	}
-	// init semaphore set
-	if ((initelement(sem_id, 0, 1)) == -1) { // init sem to 1
-		perror("init element 0 error");
-		return -1;
-	}
-	if ((initelement(sem_id, 1, 0)) == -1) { // init next to 0
-		perror("init element 1 error");
-		return -1;
-	}
-	if ((initelement(sem_id, 2, 1)) == -1) { // init mutex to 1
-		perror("init element 2 error");
-		return -1;
-	}
+	// allocate shared memory/semaphore set
+	initsharedsems(key_sem);
 
 	// fork for each child process to create
 	for(i = 1; i <= p_n; i++) { // 1 through 19
@@ -86,26 +67,13 @@ main(int argc, char *argv[]) {
 		}
 		printf("In master-finished tasks. Cleaning up and quiting.\n");
 
-		// remove semaphore set 
-		if((shmctl(sem_id, 0, IPC_RMID)) == -1){
-			perror("shmctl:IPC_RMID");
-			exit(1);
-		}
+		// clean up shared sem set and int
+		cleanupshared(key_sem, key_shm);
+
 		// free argument memory process num transfer 
 		free(arg2);
 	} // end else for pid > 0 -> parent process actions
 } // end main
-
-// init element func for semaphore set
-int initelement(int semid, int semnum, int semval) {
-	union semun {
-		int val;
-		struct semid_ds *buf;
-		unsigned short *array;
-	} arg;
-	arg.val = semval;
-	return semctl(semid, semnum, SETVAL, arg);
-}
 
 void free_mem() {
 	int sem_id;
@@ -114,7 +82,7 @@ void free_mem() {
 	
 	fprintf(stderr,"Received SIGINT. Cleaning up and quiting.\n");
 	// kill each process if program timed out
-	if (timed_out = true;) {
+	if (timed_out = true) {
 		for(i = 0; i < 19; i++) { // 0-18
 			kill(pids[i],SIGINT); // kill child process
 			waitpid(pids[i],NULL,0);
