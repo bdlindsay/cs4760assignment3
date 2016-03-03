@@ -7,11 +7,12 @@ void wait_sem(int sem_id, int sem_num) {
 	sops[0].sem_op = -1; // decrement by 1
 	sops[0].sem_flg = 0; // no flag
 	// wait
-	while((semctl(sem_id, sem_num, GETVAL)) <= 0);
+	//while((semctl(sem_id, sem_num, GETVAL)) <= 0);
 	// then decrement
-	if((semop(sem_id, sops, 1)) == -1) {
+	while((semop(sem_id, sops, 1)) == -1) {
 		perror("semop:wait");
-		exit(1);
+		if (errno != EINTR)
+			return;
 	}	
 }
 

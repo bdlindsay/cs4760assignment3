@@ -27,7 +27,8 @@ $(OBJSS) : master.h monitor.h
 clean :
 	$(RM) -f $(EXES) $(EXEM) $(OBJSS) $(OBJSM)
 
-
+cleanexe :
+	$(RM) -f slave master
 
 
 

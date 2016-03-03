@@ -2,7 +2,7 @@
 
 void wait_cond(cond_t *cond) {
 	cond->num_waiting_procs++; // # processes waiting on this condition
-	if(cond->s_info->next_count > 0) { // is someone waiting inside monitor
+	if(cond->next_count > 0) { // is someone waiting inside monitor
 		signal_sem(cond->sem_id,1); // next.signal() - wake it up
 	} else {
 		signal_sem(cond->sem_id,0); // mutex.signal() - No, free mutex so others enter
@@ -15,16 +15,18 @@ void wait_cond(cond_t *cond) {
 void signal_cond(cond_t *cond) {
 	if (cond->num_waiting_procs <= 0) // do nothing if no one waiting
 		return;
-	cond->s_info->next_count++; // # of ready proccesses inside monitor
+	cond->next_count++; // # of ready proccesses inside monitor
 	signal_sem(cond->sem.val,0); // sem.signal()
 	wait_sem(cond->sem_id,1); // next.wait() - you wait. let signaled process run
-	cond->s_info->next_count--; // one less process in monitor
+	cond->next_count--; // one less process in monitor
 }
 
 // call for each cond_t with the same key_sem & key_shm
-cond_t* initcondition(int key_sem, int key_shm) {
+cond_t* initcondition(int key_sem, int key_cond) {
 	int shm_id;
-	cond_t *cond = (cond_t*)malloc(sizeof(cond_t*));
+	cond_t *cond;
+	shm_id = shmget(key_cond, sizeof(cond_t*),IPC_CREAT | 0755);
+	cond = (cond_t*) shmat(shm_id,0,0);
 
 	// init shared semaphores is called separately
 	// save sem_id
@@ -37,16 +39,17 @@ cond_t* initcondition(int key_sem, int key_shm) {
 		perror("semget");
 		exit(1);
 	}	
-	// acutal init
-	if ((initelement(cond->sem.val,0,0)) != 0) {
+	// actual init
+	if ((initelement(cond->sem.val,0,1)) != 0) {
 		perror("semctl:initelement");
 		exit(1);
 	}
 	// init int vars	
 	cond->num_waiting_procs = 0;
-	shm_id = shmget(key_shm, sizeof(info_t*),IPC_CREAT | 0755);
-	cond->s_info = (info_t*)shmat(shm_id,0,0);
-	cond->s_info->next_count = 0;
+	cond->next_count = 0;
+	//shm_id = shmget(key_shm, sizeof(info_t*),IPC_CREAT | 0755);
+	//cond->s_info = (info_t*)shmat(shm_id,0,0);
+	//cond->s_info->next_count = 0;
 
 	return cond;
 }
@@ -73,9 +76,12 @@ void initsharedsems(int key_sem) {
 void cleanupcond(cond_t *cond) {
 	int i;
 	int id;
-	info_t *tmp = cond->s_info;
+	/*info_t *tmp = cond->s_info;
 	// detach shared int
 	if((i = shmdt(tmp)) == -1) {
+		perror("shmdt");
+	}*/
+	if((i = shmdt(cond)) == -1) {
 		perror("shmdt");
 	}
 	// remove sem_t sem - semaphore set
@@ -83,11 +89,11 @@ void cleanupcond(cond_t *cond) {
 	if((i = semctl(id,0,IPC_RMID)) != 0) {
 		perror("semctl:IPC_RMID");
 	}
-	free(cond);
+	//free(cond);
 }
 
 // call only after cleanupcond for each cond_t being used
-void cleanupshared(int key_sem, int key_shm) {
+void cleanupshared(int key_sem, int key_cond) {
 	int i;
 	int id;
 	// clean up mutex and next semaphores, will only confirm perms if exists	
@@ -100,7 +106,7 @@ void cleanupshared(int key_sem, int key_shm) {
 		exit(1);
 	}
 	// remove shared next_count int	
-	if ((id = shmget(key_shm,sizeof(info_t*),IPC_CREAT | 0755)) == -1) {
+	if ((id = shmget(key_cond,sizeof(cond_t*),IPC_CREAT | 0755)) == -1) {
 		perror("shmget");
 		exit(1);
 	}

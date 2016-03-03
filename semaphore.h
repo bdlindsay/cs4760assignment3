@@ -6,6 +6,7 @@
 #include <sys/sem.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 typedef struct semaphore {
 	int val;

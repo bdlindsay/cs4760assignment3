@@ -15,4 +15,6 @@
 
 typedef enum {false, true} bool;
 
+void critical_section(int i);
+
 #endif

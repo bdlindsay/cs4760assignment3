@@ -13,6 +13,7 @@ bool timed_out = false;
 void timeout();
 void free_mem();
 const int SIZE = 3;
+extern cond_t *cond = NULL; // shared condition for monitor access
 
 main(int argc, char *argv[]) {
 	char *arg1 = "slave"; // to send execl process argv[0]
@@ -20,7 +21,8 @@ main(int argc, char *argv[]) {
 	arg3 = malloc(sizeof(int)); // to send execl process args
 	int pid;
 	const int key_sem = 30; // key of shared semaphore set
-	const int key_shm = 31; // key of shared int
+	//const int key_shm = 31; // key of shared int
+	const int key_cond = 32; //key for condition
 	int act_procs = 0; // active process counter
 	int i = 0; // index var
 
@@ -38,6 +40,10 @@ main(int argc, char *argv[]) {
 	}
 	// allocate shared memory/semaphore set
 	initsharedsems(key_sem);
+		
+	
+	cond = (cond_t*)initcondition(key_sem,key_cond);
+		
 
 	// fork for each child process to create
 	for(i = 1; i <= p_n; i++) { // 1 through 19
@@ -68,7 +74,8 @@ main(int argc, char *argv[]) {
 		printf("In master-finished tasks. Cleaning up and quiting.\n");
 
 		// clean up shared sem set and int
-		cleanupshared(key_sem, key_shm);
+		cleanupcond(cond);
+		cleanupshared(key_sem, key_cond);
 
 		// free argument memory process num transfer 
 		free(arg2);
@@ -78,7 +85,9 @@ main(int argc, char *argv[]) {
 void free_mem() {
 	int sem_id;
 	int i; // counter
-	int key = 20; // key for semaphore set
+	int key_sem = 30; // key for semaphore set
+	//int key_shm = 31; // key for shared int
+	int key_cond = 32; // key for shared cond
 	
 	fprintf(stderr,"Received SIGINT. Cleaning up and quiting.\n");
 	// kill each process if program timed out
@@ -90,7 +99,7 @@ void free_mem() {
 		// to be safe
 		system("killall slave");
 	}
-	// get the sem_id of semaphore set 
+	/*// get the sem_id of semaphore set 
 	if((sem_id = semget(key,SIZE,0755)) == -1) {
 		perror("semget:");
 		exit(1);
@@ -99,7 +108,9 @@ void free_mem() {
 	if((shmctl(sem_id, 0, IPC_RMID)) == -1) {
 		perror("semctl:IPC_RMID");
 		exit(1);
-	}	
+	}*/
+	cleanupcond(cond);
+	cleanupshared(key_sem, key_cond);
 	free(arg2);
 
 	signal(SIGINT,SIG_DFL); // restore default action to SIGINT
