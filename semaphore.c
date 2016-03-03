@@ -6,9 +6,7 @@ void wait_sem(int sem_id, int sem_num) {
 	sops[0].sem_num = sem_num; // which semaphore in set sem_id
 	sops[0].sem_op = -1; // decrement by 1
 	sops[0].sem_flg = 0; // no flag
-	// wait
-	//while((semctl(sem_id, sem_num, GETVAL)) <= 0);
-	// then decrement
+	// wait()
 	while((semop(sem_id, sops, 1)) == -1) {
 		perror("semop:wait");
 		if (errno != EINTR)
@@ -21,7 +19,7 @@ void signal_sem(int sem_id, int sem_num) {
 	sops[0].sem_num = sem_num; // which semaphore in set sem_id
 	sops[0].sem_op = 1; // increment by 1
 	sops[0].sem_flg = 0; // no flag
-	// increment by 1
+	// signal()
 	if((semop(sem_id, sops, 1)) == -1) {
 		perror("semop:signal");
 		exit(1);

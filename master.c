@@ -4,25 +4,22 @@
 // Brett Lindsay
 // Project 3 CS4760
 
-const int p_n = 19; // process number to send each process
-const int n = 18; // its respective place in the flag array (1 less)
 char *arg2; // to send execl process args
-char *arg3; // to send execl process args
 int pids[18] = { 0 };
 bool timed_out = false;
+const int SIZE = 3;
+cond_t *cond = NULL; // shared condition for monitor access
+// signal handler prototypes
 void timeout();
 void free_mem();
-const int SIZE = 3;
-extern cond_t *cond = NULL; // shared condition for monitor access
 
 main(int argc, char *argv[]) {
 	char *arg1 = "slave"; // to send execl process argv[0]
 	arg2 = malloc(sizeof(int)); // to send execl process args
-	arg3 = malloc(sizeof(int)); // to send execl process args
 	int pid;
-	const int key_sem = 30; // key of shared semaphore set
+	//const int key_sem = 30; // key of shared semaphore set
 	//const int key_shm = 31; // key of shared int
-	const int key_cond = 32; //key for condition
+	//const int key_cond = 32; //key for condition
 	int act_procs = 0; // active process counter
 	int i = 0; // index var
 
@@ -38,12 +35,9 @@ main(int argc, char *argv[]) {
 		fprintf(stderr,"Setting timeout for 60 seconds (default)\n");
 		alarm(300);
 	}
-	// allocate shared memory/semaphore set
-	initsharedsems(key_sem);
-		
-	
+
+	// allocates all vars and shared memory for cond_t	
 	cond = (cond_t*)initcondition(key_sem,key_cond);
-		
 
 	// fork for each child process to create
 	for(i = 1; i <= p_n; i++) { // 1 through 19
@@ -73,21 +67,17 @@ main(int argc, char *argv[]) {
 		}
 		printf("In master-finished tasks. Cleaning up and quiting.\n");
 
-		// clean up shared sem set and int
-		cleanupcond(cond);
-		cleanupshared(key_sem, key_cond);
-
+		// clean up semaphore sets and dealloc cond_t *cond
+		cleanupcond(key_sem, key_cond, cond);
 		// free argument memory process num transfer 
 		free(arg2);
+
 	} // end else for pid > 0 -> parent process actions
 } // end main
 
 void free_mem() {
 	int sem_id;
 	int i; // counter
-	int key_sem = 30; // key for semaphore set
-	//int key_shm = 31; // key for shared int
-	int key_cond = 32; // key for shared cond
 	
 	fprintf(stderr,"Received SIGINT. Cleaning up and quiting.\n");
 	// kill each process if program timed out
@@ -99,22 +89,13 @@ void free_mem() {
 		// to be safe
 		system("killall slave");
 	}
-	/*// get the sem_id of semaphore set 
-	if((sem_id = semget(key,SIZE,0755)) == -1) {
-		perror("semget:");
-		exit(1);
-	}
-	// free allocated memory
-	if((shmctl(sem_id, 0, IPC_RMID)) == -1) {
-		perror("semctl:IPC_RMID");
-		exit(1);
-	}*/
-	cleanupcond(cond);
-	cleanupshared(key_sem, key_cond);
+	// clean up semaphore sets and dealloc cond_t *cond
+	cleanupcond(key_sem, key_cond, cond);
+	// free allocated mem for arg sending
 	free(arg2);
 
 	signal(SIGINT,SIG_DFL); // restore default action to SIGINT
-	raise(SIGKILL); // take normal action for SIGINT after cleanup
+	raise(SIGINT); // take normal action for SIGINT after cleanup
 }
 
 void timeout() {

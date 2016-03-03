@@ -1,14 +1,13 @@
+#ifndef CONDITION_H
+#define CONDITION_H
+
 #include "semaphore.h"
 #include <sys/shm.h>
-
-typedef struct sharedInfo {
-	int next_count; // shared int number waiting to enter monitor
-} info_t;	
+#include <signal.h>
 
 typedef struct condition {
 	int num_waiting_procs;
-	sem_t sem; // sem_t.val holds the sem_id of the semaphore
-	//info_t *s_info;
+	sem_t sem; // sem.val holds the sem_id of the semaphore
 	int next_count; 
 	int sem_id; // sem_id for next and mutex
 	//sem_t next; // shared semaphore index 0
@@ -20,5 +19,6 @@ cond_t* initcondition(int key_sem, int key_cond);
 void initsharedsems(int key_sem); 
 void wait_cond(cond_t *cond);
 void signal_cond(cond_t *cond); 
-void cleanupshared(int key_sem, int key_cond);
-void cleanupcond(cond_t *cond);
+void cleanupcond(int key_sem, int key_cond, cond_t *cond);
+
+#endif

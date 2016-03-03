@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-typedef struct semaphore {
+;typedef struct semaphore {
 	int val;
 } sem_t;
 
