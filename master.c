@@ -5,6 +5,7 @@
 // Project 3 CS4760
 
 char *arg2; // to send execl process args
+char *arg3; // to send shm_id to child process
 int pids[18] = { 0 };
 bool timed_out = false;
 const int SIZE = 3;
@@ -16,10 +17,8 @@ void free_mem();
 main(int argc, char *argv[]) {
 	char *arg1 = "slave"; // to send execl process argv[0]
 	arg2 = malloc(sizeof(int)); // to send execl process args
+	arg3 = malloc(sizeof(int)); // to send execl process args
 	int pid;
-	//const int key_sem = 30; // key of shared semaphore set
-	//const int key_shm = 31; // key of shared int
-	//const int key_cond = 32; //key for condition
 	int act_procs = 0; // active process counter
 	int i = 0; // index var
 
@@ -32,12 +31,13 @@ main(int argc, char *argv[]) {
 		fprintf(stderr,"Setting timeout for %d seconds\n",i);
 		alarm(i);
 	} else { // default
-		fprintf(stderr,"Setting timeout for 60 seconds (default)\n");
+		fprintf(stderr,"Setting timeout for 5 minutes (default)\n");
 		alarm(300);
 	}
 
 	// allocates all vars and shared memory for cond_t	
-	cond = (cond_t*)initcondition(key_sem,key_cond);
+	cond = (cond_t*)initcondition();
+	sprintf(arg3,"%d",cond->shm_id);
 
 	// fork for each child process to create
 	for(i = 1; i <= p_n; i++) { // 1 through 19
@@ -58,7 +58,7 @@ main(int argc, char *argv[]) {
 		}
 	}
 	if (pid == 0) { // children process actions
-		execl("slave", arg1, arg2, 0); // start a slave process
+		execl("slave", arg1, arg2, arg3, 0); // start a slave process
 	}
 	else if (pid > 0) { // parent process actions
 		for(i = 0; i < n; i++) { // wait for children to finish
@@ -68,15 +68,15 @@ main(int argc, char *argv[]) {
 		printf("In master-finished tasks. Cleaning up and quiting.\n");
 
 		// clean up semaphore sets and dealloc cond_t *cond
-		cleanupcond(key_sem, key_cond, cond);
+		cleanupcond(cond);
 		// free argument memory process num transfer 
 		free(arg2);
+		free(arg3);
 
 	} // end else for pid > 0 -> parent process actions
 } // end main
 
 void free_mem() {
-	int sem_id;
 	int i; // counter
 	
 	fprintf(stderr,"Received SIGINT. Cleaning up and quiting.\n");
@@ -90,9 +90,10 @@ void free_mem() {
 		system("killall slave");
 	}
 	// clean up semaphore sets and dealloc cond_t *cond
-	cleanupcond(key_sem, key_cond, cond);
+	cleanupcond(cond);
 	// free allocated mem for arg sending
 	free(arg2);
+	free(arg3);
 
 	signal(SIGINT,SIG_DFL); // restore default action to SIGINT
 	raise(SIGINT); // take normal action for SIGINT after cleanup

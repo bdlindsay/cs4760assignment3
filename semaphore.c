@@ -1,5 +1,8 @@
 #include "semaphore.h"
 
+// semaphore.c
+// Brett Lindsay
+// cs4760 assignment3
 
 void wait_sem(int sem_id, int sem_num) {
 	struct sembuf sops[1];

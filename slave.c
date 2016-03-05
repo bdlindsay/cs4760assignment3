@@ -14,6 +14,7 @@ void process(int i);
 
 main (int argc, char *argv[]) {
 	process_num = atoi(argv[1]); // process num sent from parent process
+	int shm_id = atoi(argv[2]); // shm for shared cond_t
 	int p_index = process_num - 1;
 	time_t tcurrent; // for time reporting
 	struct tm *timeinfo; // for time reporting
@@ -28,7 +29,7 @@ main (int argc, char *argv[]) {
 		fprintf(stderr, "Process %d attempt to enter monitor  at %d:%02d:%02d\n", 
 			process_num, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 
-		enter_monitor(process_num, &critical_section);
+		enter_monitor(process_num, shm_id, &critical_section);
 
 		write_count++;
 	}

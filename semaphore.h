@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
+// semaphore.h
+// Brett Lindsay
+// cs4760 assignment3
+
 ;typedef struct semaphore {
 	int val;
 } sem_t;

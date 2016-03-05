@@ -1,15 +1,16 @@
 #include "monitor.h"
 
+// monitor.c
+// Brett Lindsay
+// cs4760 assignment3
+
 // monitor takes a function pointer (function w/ int as parameter)
 // and an int to run with the function pointer
-void enter_monitor(int proc_num, void (*enter_cs)(int)) {
+void enter_monitor(int proc_num, int shm_id,  void (*enter_cs)(int)) {
 	time_t tcurrent;
 	struct tm *timeinfo;
-	int shm_id;
-	int key_cond = 32;
 	cond_t *cond;
 	
-	shm_id = shmget(key_cond,sizeof(cond_t*),0755);
 	cond = shmat(shm_id,0,0);
 
 	wait_sem(cond->sem_id,0); // mutex.wait() - wait for free critical section
